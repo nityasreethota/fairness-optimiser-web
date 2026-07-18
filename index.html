@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>NHS Fairness Optimiser</title>
+
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- Chart.js (used later) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PapaParse (used later for CSV upload) -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+
+        <h1>⚖ NHS Fairness Optimiser</h1>
+
+        <p class="subtitle">
+            Interactive implementation of optimal group-specific thresholds
+            for NHS mental health triage based on Bayesian decision theory
+            and Chouldechova's impossibility theorem.
+        </p>
+
+    </header>
+<!-- <div id="app"></div> -->
+ <nav class="tabs">
+
+    <button class="tab-button active"
+            data-tab="optimiser">
+        Optimiser
+    </button>
+
+    <button class="tab-button"
+            data-tab="theorem">
+        Theorem
+    </button>
+
+    <button class="tab-button"
+            data-tab="guide">
+        How to Use
+    </button>
+
+</nav>
+    <main>
+        <section id="optimiser" class="tab-content active">
+
+        <!-- ========================= -->
+        <!-- PARAMETERS -->
+        <!-- ========================= -->
+
+        <section class="card">
+
+            <h2>Parameters</h2>
+
+            <div class="control">
+
+                <label for="pa">
+                    Group A Base Rate (P<sub>A</sub>)
+                </label>
+
+                <input
+                    id="pa"
+                    type="range"
+                    min="0.05"
+                    max="0.95"
+                    step="0.01"
+                    value="0.30">
+
+                <span id="paValue">0.30</span>
+
+            </div>
+
+            <div class="control">
+
+                <label for="pb">
+                    Group B Base Rate (P<sub>B</sub>)
+                </label>
+
+                <input
+                    id="pb"
+                    type="range"
+                    min="0.05"
+                    max="0.95"
+                    step="0.01"
+                    value="0.50">
+
+                <span id="pbValue">0.50</span>
+
+            </div>
+
+            <div class="control">
+
+                <label for="cfn">
+                    False Negative Cost
+                </label>
+
+                <input
+                    id="cfn"
+                    type="range"
+                    min="1"
+                    max="20"
+                    step="0.5"
+                    value="5">
+
+                <span id="cfnValue">5</span>
+
+            </div>
+
+            <div class="control">
+
+                <label for="cfp">
+                    False Positive Cost
+                </label>
+
+                <input
+                    id="cfp"
+                    type="range"
+                    min="0.5"
+                    max="5"
+                    step="0.5"
+                    value="1">
+
+                <span id="cfpValue">1</span>
+
+            </div>
+
+            <div class="control">
+
+                <label for="multiplier">
+                    Group A Cost Multiplier
+                </label>
+
+                <input
+                    id="multiplier"
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.1"
+                    value="1.5">
+
+                <span id="multiplierValue">1.5</span>
+
+            </div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- CSV -->
+        <!-- ========================= -->
+
+        <section class="card">
+
+            <h2>Upload CSV</h2>
+
+            <p>
+
+                Upload a CSV containing:
+
+                <strong>
+
+                    prob,
+                    true_label,
+                    group
+
+                </strong>
+
+            </p>
+
+            <input
+                type="file"
+                id="csvFile"
+                accept=".csv">
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- BUTTON -->
+        <!-- ========================= -->
+
+        <section class="card">
+
+            <button id="computeButton">
+
+                Compute Optimal Thresholds
+
+            </button>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- RESULTS -->
+        <!-- ========================= -->
+
+        <section class="card">
+
+            <h2>Results</h2>
+
+            <div id="results">
+
+                Results will appear here.
+
+            </div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- CHARTS -->
+        <!-- ========================= -->
+
+        <section class="card">
+
+            <h2>ROC Curve</h2>
+
+            <canvas id="rocChart"></canvas>
+
+        </section>
+
+        <section class="card">
+
+            <h2>Expected Loss</h2>
+
+            <canvas id="lossChart"></canvas>
+
+        </section>
+
+        <section class="card">
+
+            <h2>Chouldechova PPV</h2>
+
+            <canvas id="ppvChart"></canvas>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- EXPORT -->
+        <!-- ========================= -->
+
+        <section class="card">
+
+            <h2>Export JSON</h2>
+
+            <textarea
+                id="jsonOutput"
+                rows="14"
+                readonly></textarea>
+
+            <button id="downloadJson">
+                Download JSON
+            </button>
+
+        </section>
+        </section>
+        <section id="theorem" class="tab-content">
+
+            <div class="card">
+
+                <h2>
+                    Cost-Sensitive Fair Threshold Optimisation
+                </h2>
+
+                <p>
+
+                    This application searches for decision thresholds that minimise
+                    expected classification loss while illustrating the fairness
+                    trade-offs described by Chouldechova (2017).
+
+                </p>
+
+                <hr>
+
+                <h3>Expected Loss</h3>
+
+                <p>
+
+                    For a classifier operating at threshold \(t\),
+
+                </p>
+
+                $$
+
+                L(t)
+                =
+                C_{FN}\,
+                FNR(t)\,
+                P(Y=1)
+                +
+                C_{FP}\,
+                FPR(t)\,
+                P(Y=0)
+
+                $$
+
+                <p>
+
+                    where
+
+                </p>
+
+                <ul>
+
+                    <li>\(C_{FN}\) = false negative cost</li>
+
+                    <li>\(C_{FP}\) = false positive cost</li>
+
+                    <li>\(FNR\) = false negative rate</li>
+
+                    <li>\(FPR\) = false positive rate</li>
+
+                </ul>
+
+                <hr>
+
+                <h3>Group-specific Costs</h3>
+
+                <p>
+
+                    The optimiser allows asymmetric costs for protected groups.
+
+                </p>
+
+                $$
+
+                C^{A}_{FN}
+                =
+                \lambda C_{FN}
+
+                $$
+
+                <p>
+
+                    where
+
+                </p>
+
+                $$
+
+                \lambda \ge 1
+
+                $$
+
+                <p>
+
+                    is the user-selected multiplier.
+
+                </p>
+
+                <hr>
+
+                <h3>Positive Predictive Value</h3>
+
+                $$
+
+                PPV
+
+                =
+
+                \frac{
+
+                TPR \times P(Y=1)
+
+                }
+
+                {
+
+                TPR \times P(Y=1)
+
+                +
+
+                FPR \times P(Y=0)
+
+                }
+
+                $$
+
+                <hr>
+
+                <h3>Chouldechova Impossibility</h3>
+
+                <p>
+
+                    If two demographic groups have different base rates,
+
+                </p>
+
+                $$
+
+                P_A
+                \ne
+                P_B
+
+                $$
+
+                <p>
+
+                    then equalising all fairness metrics simultaneously is generally
+                    impossible.
+
+                </p>
+
+                <p>
+
+                    Even if
+
+                </p>
+
+                $$
+
+                TPR_A=T P R_B
+
+                $$
+
+                <p>
+
+                    and
+
+                </p>
+
+                $$
+
+                FPR_A=FPR_B
+
+                $$
+
+                <p>
+
+                    the resulting PPVs become
+
+                </p>
+
+                $$
+
+                PPV_A
+                \ne
+                PPV_B
+
+                $$
+
+                <p>
+
+                    whenever
+
+                </p>
+
+                $$
+
+                P_A
+                \ne
+                P_B.
+
+                $$
+
+            </div>
+
+        </section>
+        <section id="guide" class="tab-content">
+
+            <div class="card">
+
+            <h2>
+            How to Use
+            </h2>
+
+            <ol>
+
+            <li>
+
+            Upload a CSV file containing
+
+            <pre>
+
+            prob,true_label,group
+
+            </pre>
+
+            </li>
+
+            <li>
+
+            Adjust
+
+            <ul>
+
+            <li>Group A Base Rate</li>
+
+            <li>Group B Base Rate</li>
+
+            <li>False Negative Cost</li>
+
+            <li>False Positive Cost</li>
+
+            <li>Cost Multiplier</li>
+
+            </ul>
+
+            </li>
+
+            <li>
+
+            Click
+
+            <b>
+
+            Compute Optimal Thresholds
+
+            </b>
+
+            </li>
+
+            <li>
+
+            Review
+
+            <ul>
+
+            <li>Optimal thresholds</li>
+
+            <li>Expected loss</li>
+
+            <li>ROC curves</li>
+
+            <li>PPV curves</li>
+
+            <li>JSON export</li>
+
+            </ul>
+
+            </li>
+
+            </ol>
+
+            <hr>
+
+            <h3>
+            CSV Format
+            </h3>
+
+            <table>
+
+            <tr>
+
+            <th>Column</th>
+
+            <th>Description</th>
+
+            </tr>
+
+            <tr>
+
+            <td>prob</td>
+
+            <td>Predicted probability</td>
+
+            </tr>
+
+            <tr>
+
+            <td>true_label</td>
+
+            <td>Ground truth (0 or 1)</td>
+
+            </tr>
+
+            <tr>
+
+            <td>group</td>
+
+            <td>A or B</td>
+
+            </tr>
+
+            </table>
+
+            <hr>
+
+            <h3>
+            Interpreting the Results
+            </h3>
+
+            <ul>
+
+            <li>
+
+            Higher thresholds reduce false positives but increase false negatives.
+
+            </li>
+
+            <li>
+
+            Changing the cost multiplier shifts the optimal threshold for Group A.
+
+            </li>
+
+            <li>
+
+            The Expected Loss curve identifies the threshold that minimises total decision cost.
+
+            </li>
+
+            <li>
+
+            The ROC curve illustrates discrimination performance independently of prevalence.
+
+            </li>
+
+            <li>
+
+            The PPV plot demonstrates the dependence of predictive parity on group base rates.
+
+            </li>
+
+            </ul>
+
+            </div>
+
+        </section>
+    </main>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/jstat@1.9.6/dist/jstat.min.js"></script>
+
+<script src="assets/js/maths.js"></script>
+<script src="assets/js/csv.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/app.js"></script>
+
+</body>
+
+</html>
