@@ -190,6 +190,7 @@ projectSelect.addEventListener(
             currentProject
         );
         loadResearch(currentProject);
+        loadClinicalContext();
         csvLoaded = false;
 
         prepareCSVData();
@@ -197,6 +198,11 @@ projectSelect.addEventListener(
 
     }
 );
+
+function loadClinicalContext() {
+    updateClinicalContext
+}
+
 
 function getProject() {
 
@@ -856,6 +862,8 @@ console.log(result.theorem.groupA);
     jsonOutput.value =
         JSON.stringify(result, null, 2);
 
+    loadClinicalContext(result);
+
     // drawROC(result);
     // drawLossChart(result);
 
@@ -980,6 +988,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     computeResults();
     loadResearch();
+    // loadClinicalContext();
 
 });
 
@@ -1116,3 +1125,254 @@ document.querySelectorAll(".graph-tab").forEach(button=>{
             </tr>
 
             </table> */}
+
+
+
+function loadClinicalContext(result) {
+
+    if (!result) return;
+
+    const currentThresholdA =
+        result.interactive.groupA.threshold.toFixed(2);
+
+    const theoremThresholdA =
+        result.theorem.groupA.threshold.toFixed(2);
+
+    const currentThresholdB =
+        result.interactive.groupB.threshold.toFixed(2);
+
+    const theoremThresholdB =
+        result.theorem.groupB.threshold.toFixed(2);
+
+    const html = `
+<h2>Clinical Context</h2>
+
+<p>
+This demonstration illustrates how a clinical AI triage system converts
+predicted probabilities into referral decisions, and how Bayesian
+decision theory can improve those decisions while reducing expected
+clinical harm.
+</p>
+
+<h3>Step 1 — Initial Patient Cohort</h3>
+
+<p>
+Suppose the uploaded dataset contains
+<strong>${result.groupASize}</strong> patients in Group A and
+<strong>${result.groupBSize}</strong> patients in Group B.
+
+For every patient the classifier predicts a probability that the patient
+requires specialist assessment.
+These probabilities are generated from the machine learning model and are
+<strong>not yet decisions</strong>.
+</p>
+
+<p>
+
+Example:
+
+</p>
+
+<pre>
+
+Patient      Predicted probability
+
+A1                 0.84
+A2                 0.62
+A3                 0.27
+...
+
+</pre>
+
+<hr>
+
+<h3>Step 2 — Current NHS Decision Policy</h3>
+
+<p>
+
+The current policy uses a single decision threshold
+
+</p>
+
+<pre>
+
+Probability ≥ Threshold
+        ↓
+Selected for assessment
+
+Probability < Threshold
+        ↓
+Not selected
+
+</pre>
+
+<p>
+
+For this case,
+
+</p>
+
+<pre>
+
+Current threshold (Group A)
+τ = ${currentThresholdA}
+
+Current threshold (Group B)
+τ = ${currentThresholdB}
+
+</pre>
+
+<p>
+
+Applying these thresholds produces the current numbers shown in the
+Clinical Impact table.
+
+</p>
+
+<hr>
+
+<h3>Step 3 — Bayesian Decision Theory</h3>
+
+<p>
+
+Bayesian decision theory minimises the expected clinical loss
+
+</p>
+
+<pre>
+
+Expected Loss
+
+= C_FN × FN
++ C_FP × FP
+
+</pre>
+
+<p>
+
+where
+
+</p>
+
+<ul>
+
+<li><b>FN</b> = missed patients</li>
+
+<li><b>FP</b> = patients unnecessarily selected for assessment</li>
+
+<li><b>C_FN</b> = cost of missing a patient</li>
+
+<li><b>C_FP</b> = cost of an unnecessary assessment</li>
+
+</ul>
+
+<p>
+
+The theorem searches every possible threshold and selects the threshold
+that minimises this expected loss.
+
+</p>
+
+<hr>
+
+<h3>Step 4 — Additional Weight for Group A</h3>
+
+<p>
+
+Because missing patients from the under-represented group may have
+greater clinical consequences, an optional weighting multiplier can be
+applied.
+
+</p>
+
+<pre>
+
+Adjusted Cost
+
+C_FN,A
+
+=
+
+Multiplier × C_FN
+
+</pre>
+
+<p>
+
+Only the Bayesian optimisation uses this adjustment.
+
+The current NHS policy remains unchanged and therefore does not apply
+this multiplier.
+
+</p>
+
+<hr>
+
+<h3>Step 5 — New Bayesian Thresholds</h3>
+
+<p>
+
+The optimisation therefore recommends
+
+</p>
+
+<pre>
+
+Group A threshold
+
+τ*
+=
+${theoremThresholdA}
+
+
+Group B threshold
+
+τ*
+=
+${theoremThresholdB}
+
+</pre>
+
+<p>
+
+These new thresholds are then applied to exactly the same predicted
+probabilities.
+
+Only the decision rule changes — the underlying machine learning model
+remains identical.
+
+</p>
+
+<hr>
+
+<h3>Step 6 — Clinical Outcomes</h3>
+
+<p>
+
+After applying the new thresholds, the application recalculates
+
+</p>
+
+<ul>
+
+<li>Patients selected for assessment</li>
+
+<li>Patients missed</li>
+
+<li>Expected clinical loss</li>
+
+<li>Predictive parity (PPV)</li>
+
+<li>Total referrals into the assessment pathway</li>
+
+</ul>
+
+<p>
+
+The Clinical Impact tab summarises these changes for both demographic
+groups and compares the current policy with the Bayesian theorem.
+</p>
+`;
+
+    document.getElementById("clinicalContextContent").innerHTML = html;
+}
