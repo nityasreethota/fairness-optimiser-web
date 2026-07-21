@@ -1,3 +1,40 @@
+function evaluateThreshold(
+    scores,
+    labels,
+    threshold,
+    prevalence,
+    cfn,
+    cfp
+) {
+
+    const metrics =
+        computeMetrics(
+            scores,
+            labels,
+            threshold
+        );
+
+    const loss =
+        expectedLoss(
+            metrics.fpr,
+            metrics.tpr,
+            prevalence,
+            cfn,
+            cfp
+        );
+
+    return {
+
+        threshold,
+
+        loss,
+
+        metrics
+
+    };
+
+}
+
 function runFullAnalysis(
     pa,
     pb,
@@ -54,19 +91,19 @@ function runFullAnalysis(
             labelsB
         );
 
-    const metricsA =
-    metricsAtThreshold(
-        scoresA,
-        labelsA,
-        0.4
-    );
+    // const metricsA =
+    // metricsAtThreshold(
+    //     scoresA,
+    //     labelsA,
+    //     0.4
+    // );
 
-    const metricsB =
-    metricsAtThreshold(
-        scoresB,
-        labelsB,
-        0.4
-    );
+    // const metricsB =
+    // metricsAtThreshold(
+    //     scoresB,
+    //     labelsB,
+    //     0.4
+    // );
 
     const optimalA =
     optimalThresholdSearch(
@@ -86,8 +123,154 @@ function runFullAnalysis(
             cfp
         );
 
+    // =======================================
+    // THEOREM REFERENCE
+    // =======================================
+    const currentThresholdA = 0.50;
+    const currentThresholdB = 0.50;
+    const currentA =
+        evaluateThreshold(
+
+            scoresA,
+            labelsA,
+
+            currentThresholdA,
+
+            pa,
+
+            cfnA,
+
+            cfp
+
+        );
+
+    const currentB =
+        evaluateThreshold(
+
+            scoresB,
+            labelsB,
+
+            currentThresholdB,
+
+            pb,
+
+            cfn,
+
+            cfp
+
+        );
+    const theoremA =
+        evaluateThreshold(
+
+            scoresA,
+            labelsA,
+
+            optimalA.threshold,
+
+            pa,
+
+            cfnA,
+
+            cfp
+
+        );
+
+    const theoremB =
+        evaluateThreshold(
+
+            scoresB,
+            labelsB,
+
+            optimalB.threshold,
+
+            pb,
+
+            cfn,
+
+            cfp
+
+        );
+    // const currentLoss =
+    //     currentA.loss +
+    //     currentB.loss;
+
+    // const theoremLoss =
+    //     theoremA.loss +
+    //     theoremB.loss;
+
+    // const lossReduction = 100 * (currentLoss - theoremLoss) / currentLoss;
+
+    // const currentPPVGap =
+    //     Math.abs(
+    //         currentA.metrics.ppv  - currentB.metrics.ppv
+
+    //     );
+
+    // const theoremPPVGap =
+    //     Math.abs(
+    //         theoremA.metrics.ppv -
+    //         theoremB.metrics.ppv
+    //     );
+
     const lossA = [];
     const lossB = [];
+
+    const currentLoss =
+        currentA.loss +
+        currentB.loss;
+
+    const theoremLoss =
+        theoremA.loss +
+        theoremB.loss;
+
+    const lossReduction =
+        currentLoss -
+        theoremLoss;
+
+    const currentPPVGap =
+        Math.abs(
+            currentA.metrics.ppv -
+            currentB.metrics.ppv
+        );
+
+    const theoremPPVGap =
+        Math.abs(
+            theoremA.metrics.ppv -
+            theoremB.metrics.ppv
+        );
+
+    const thresholdADiff =
+        currentA.threshold -
+        theoremA.threshold;
+
+    const thresholdBDiff =
+        currentB.threshold -
+        theoremB.threshold;
+
+    const lossDiff =
+        currentLoss -
+        theoremLoss;
+
+    const ppvGapDiff =
+        currentPPVGap -
+        theoremPPVGap;
+        
+
+    // const diffThresholdA =
+    //     result.interactive.groupA.threshold -
+    //     result.theorem.groupA.threshold;
+
+    // const diffThresholdB =
+    //     result.interactive.groupB.threshold -
+    //     result.theorem.groupB.threshold;
+
+    // const diffLoss =
+    //     result.summary.currentLoss -
+    //     result.summary.theoremLoss;
+
+    // const diffPPV =
+    //     result.summary.currentPPVGap -
+    //     result.summary.theoremPPVGap;
 
     for (let i = 0; i < rocA.thresholds.length; i++) {
 
@@ -157,11 +340,43 @@ function runFullAnalysis(
 
             groupASize: scoresA.length,
             groupBSize: scoresB.length,
-            metricsA,
-            metricsB,
+            // metricsA,
+            // metricsB,
+
+            interactive: {
+
+                groupA: currentA,
+
+                groupB: currentB
+
+            },
+
+            theorem: {
+
+                groupA: theoremA,
+
+                groupB: theoremB
+
+            },
+            summary: {
+
+                currentLoss,
+                theoremLoss,
+                lossReduction,
+
+                currentPPVGap,
+                theoremPPVGap,
+
+                thresholdADiff,
+                thresholdBDiff,
+                lossDiff,
+                ppvGapDiff
+                
+
+            },
 
             optimalA,
-            optimalB, 
+            optimalB,
 
             rocA,
             rocB,
@@ -169,7 +384,11 @@ function runFullAnalysis(
             lossA,
             lossB,
 
-            ppvCurve
+            ppvCurve,
+            // diffThresholdA,
+            // diffThresholdB,
+            // diffLoss,
+            // diffPPV 
 
         };
 
@@ -520,6 +739,16 @@ function runAnalysisFromCSV(
     cfp,
     multiplier
 ) {
+
+    console.log(data);
+
+    if (!data || data.length === 0) {
+
+        console.error("No CSV data loaded.");
+
+        return null;
+
+    }
 
     const groupA =
         data.filter(r => r.group === "A");

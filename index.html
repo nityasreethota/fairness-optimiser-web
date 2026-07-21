@@ -11,6 +11,7 @@
 
     <!-- Chart.js (used later) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
 
     <!-- PapaParse (used later for CSV upload) -->
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -30,6 +31,11 @@
             for NHS mental health triage based on Bayesian decision theory
             and Chouldechova's impossibility theorem.
         </p>
+        <p class="subtitle">
+            Computes group-specific decision thresholds that minimise expected 
+            clinical harm while accounting for differences in data quality, prevalence, 
+            and the costs of clinical decisions.
+        </p>
 
     </header>
 <!-- <div id="app"></div> -->
@@ -44,6 +50,17 @@
             data-tab="theorem">
         Theorem
     </button>
+    <button class="tab-button"
+            data-tab="clinicalContext">
+        Clinical Context
+    </button>
+
+    <button class="tab-button"
+            data-tab="research">
+        Research
+    </button>
+    
+    
 
     <button class="tab-button"
             data-tab="guide">
@@ -53,171 +70,637 @@
 </nav>
     <main>
         <section id="optimiser" class="tab-content active">
+            <section class="card">
+
+<h2>Research Problem</h2>
+
+<p class="section-description">
+
+This interactive application accompanies my research on
+<b>Bayesian Fairness Optimisation</b> for NHS clinical decision-making.
+
+Rather than applying a single decision threshold to every patient,
+the optimiser derives <b>group-specific Bayesian decision thresholds</b>
+that minimise expected clinical harm while accounting for
+different prevalence, unequal error costs and fairness constraints.
+
+</p>
+
+<div class="guide-grid">
+
+<!-- Project -->
+
+<div class="guide-card">
+
+<h3>Select Clinical Case Study</h3>
+
+<p>
+
+Choose one of the research case studies below or upload your own
+prediction dataset(<b>prob</b>,
+<b>true_label</b> and
+<b>group</b>) to evaluate your own classifier using the same Bayesian optimisation.
+
+</p>
+
+<select id="projectSelect">
+
+<option value="chronosig">
+CHRONOSIG
+</option>
+
+<option value="camhs">
+NHS CAMHS
+</option>
+
+</select>
+<input
+type="file"
+id="csvFile"
+accept=".csv">
+
+</div>
+
+<!-- Upload -->
+
+<div class="guide-card">
+
+<h3>Upload Your Own Predictions</h3>
+
+<p>
+
+Upload model predictions containing
+
+<b>prob</b>,
+<b>true_label</b> and
+<b>group</b>
+
+to evaluate your own classifier using the same Bayesian optimisation.
+
+</p>
+
+<input
+type="file"
+id="csvFile"
+accept=".csv">
+
+</div>
+
+<!-- Dynamic Context -->
+
+<div class="guide-card">
+
+<h3 id="projectTitle"></h3>
+
+<p id="projectDescription"></p>
+
+<hr>
+
+<p>
+
+<b>Group A — Under-represented population</b>
+
+</p>
+
+<p id="groupADescription"></p>
+
+<p>
+
+<b>Group B — Majority population</b>
+
+</p>
+
+<p id="groupBDescription"></p>
+
+</div>
+
+</div>
+
+</section>
+           
 
         <!-- ========================= -->
         <!-- PARAMETERS -->
         <!-- ========================= -->
+<div class="controls">
+
+<div class="dashboard">
+
+<!-- ===================================================== -->
+<!-- CLINICAL ASSUMPTIONS -->
+<!-- ===================================================== -->
+
+<div class="sidebar">
+
+<h2>Clinical Assumptions</h2>
+
+<p class="section-description">
+
+Adjust the assumptions below to explore how Bayesian decision theory
+changes referral decisions for under-represented and majority groups.
+
+</p>
+
+
+<!-- ================= Group A ================= -->
+
+<div class="control">
+
+    <div class="control-top">
+
+        <label id="GroupABaseRateTitle" for="pa">
+            Under-represented Group Prevalence
+        </label>
+
+        <span class="slider-value" id="paValue">
+            0.30
+        </span>
+
+    </div>
+
+    <input
+        id="pa"
+        type="range"
+        min="0.05"
+        max="0.95"
+        step="0.01"
+        value="0.30">
+
+    <small
+        id="GroupABaseRateDescription"
+        class="slider-description">
+
+        Estimated proportion of patients who genuinely require specialist care.
+
+    </small>
+
+</div>
+
+
+<!-- ================= Group B ================= -->
+
+<div class="control">
+
+    <div class="control-top">
+
+        <label id="GroupBBaseRateTitle" for="pb">
+            Majority Group Prevalence
+        </label>
+
+        <span class="slider-value" id="pbValue">
+            0.50
+        </span>
+
+    </div>
+
+    <input
+        id="pb"
+        type="range"
+        min="0.05"
+        max="0.95"
+        step="0.01"
+        value="0.50">
+
+    <small
+        id="GroupBBaseRateDescription"
+        class="slider-description">
+
+        Estimated proportion of patients who genuinely require specialist care.
+
+    </small>
+
+</div>
+
+
+<!-- ================= FALSE NEGATIVE ================= -->
+
+<div class="control">
+
+    <div class="control-top">
+
+        <label id="FalseNegativeCostTitle" for="cfn">
+            Cost of Missing a Patient
+        </label>
+
+        <span class="slider-value" id="cfnValue">
+            5
+        </span>
+
+    </div>
+
+    <input
+        id="cfn"
+        type="range"
+        min="1"
+        max="20"
+        step="0.5"
+        value="5">
+
+    <small
+        id="FalseNegativeCostDescription"
+        class="slider-description">
+
+        Higher values prioritise reducing missed patients even if more referrals are made.
+
+    </small>
+
+</div>
+
+
+<!-- ================= FALSE POSITIVE ================= -->
+
+<div class="control">
+
+    <div class="control-top">
+
+        <label id="FalsePositiveCostTitle" for="cfp">
+            Cost of an Unnecessary Referral
+        </label>
+
+        <span class="slider-value" id="cfpValue">
+            1
+        </span>
+
+    </div>
+
+    <input
+        id="cfp"
+        type="range"
+        min="0.5"
+        max="5"
+        step="0.5"
+        value="1">
+
+    <small
+        id="FalsePositiveCostDescription"
+        class="slider-description">
+
+        Higher values preserve NHS capacity by reducing unnecessary referrals.
+
+    </small>
+
+</div>
+
+
+<!-- ================= EQUITY ================= -->
+
+<div class="control">
+
+    <div class="control-top">
+
+        <label id="GroupACostMultiplierTitle" for="multiplier">
+            Equity Weight
+        </label>
+
+        <span class="slider-value" id="multiplierValue">
+            1.5
+        </span>
+
+    </div>
+
+    <input
+        id="multiplier"
+        type="range"
+        min="1"
+        max="3"
+        step="0.1"
+        value="1.5">
+
+    <small
+        id="GroupACostMultiplierDescription"
+        class="slider-description">
+
+        Gives additional importance to avoiding missed referrals in the under-represented group.
+
+    </small>
+
+</div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- RESULTS -->
+<!-- ===================================================== -->
+
+<div class="workspace">
+
+<h2>Bayesian Decision Comparison</h2>
+
+<div class="results-panel">
+
+    <div class="graph-tabs">
+
+        
+        <button class="graph-tab active"
+                data-tab="clinical">
+            Clinical Impact
+        </button>
+
+        <button class="graph-tab"
+                data-tab="comparison">
+            Comparison
+        </button>
+
+        <button class="graph-tab"
+                data-tab="roc">
+            ROC
+        </button>
+
+        <button class="graph-tab"
+                data-tab="loss">
+            Loss
+        </button>
+
+        <button class="graph-tab"
+                data-tab="ppv">
+            PPV
+        </button>
+        <button class="graph-tab" 
+                data-tab="json">
+            JSON
+        </button>
+
+    </div>
+
+    <div id="clinicalTab" class="graph-content active">
+
+    <div class="clinical-impact">
+
+        <h2>Clinical Impact</h2>
+
+        <p class="section-description">
+            The Bayesian theorem changes decision thresholds, which directly
+            affects how many patients are referred, how many are missed, and
+            the overall expected clinical loss.
+        </p>
+
+        <div class="impact-grid">
+
+            <!-- ========================= -->
+            <!-- Group A                   -->
+            <!-- ========================= -->
+
+            <div class="impact-card">
+
+                <h3>
+                    Group A
+                    <span class="impact-subtitle">
+                        Under-represented group
+                    </span>
+                </h3>
+
+                <table class="impact-table">
+
+                    <tr>
+                        <th></th>
+                        <th>Current</th>
+                        <th>Theorem</th>
+                    </tr>
+
+                    <tr>
+                        <td>Decision threshold</td>
+                        <td id="impactThresholdACurrent">-</td>
+                        <td id="impactThresholdATheorem">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Selected for assessment</td>
+                        <td id="impactReferralACurrent">-</td>
+                        <td id="impactReferralATheorem">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Missed patients</td>
+                        <td id="impactMissedACurrent">-</td>
+                        <td id="impactMissedATheorem">-</td>
+                    </tr>
+
+                </table>
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Group B                   -->
+            <!-- ========================= -->
+
+            <div class="impact-card">
+
+                <h3>
+                    Group B
+                    <span class="impact-subtitle">
+                        Majority group
+                    </span>
+                </h3>
+
+                <table class="impact-table">
+
+                    <tr>
+                        <th></th>
+                        <th>Current</th>
+                        <th>Theorem</th>
+                    </tr>
+
+                    <tr>
+                        <td>Decision threshold</td>
+                        <td id="impactThresholdBCurrent">-</td>
+                        <td id="impactThresholdBTheorem">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Selected for assessment</td>
+                        <td id="impactReferralBCurrent">-</td>
+                        <td id="impactReferralBTheorem">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Missed patients</td>
+                        <td id="impactMissedBCurrent">-</td>
+                        <td id="impactMissedBTheorem">-</td>
+                    </tr>
+
+                </table>
+
+            </div>
+            <!-- ========================= -->
+            <!-- Improvement   A & B             -->
+            <!-- ========================= -->
+
+            <div class="impact-card">
+
+                <h3>
+                    Improvement
+                    <span class="impact-subtitle">
+                        Theorem
+                    </span>
+                </h3>
+
+                <table class="impact-table">
+
+                    <tr>
+                        <th></th>
+                        <th>Group A</th>
+                        <th>Group B</th>
+                        <th>Overall</th>
+                    </tr>
+
+                    <tr>
+                        <td>Additional referrals</td>
+                        <td id="extraPatientsA">-</td>
+                        <td id="extraPatientsB">-</td>
+                        <td id="impactExtraPatients">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Missed patients</td>
+                        <td id="fewerMissedA">-</td>
+                        <td id="fewerMissedB">-</td>
+                        <td id="impactFewerMissed">-</td>
+                    </tr>
+
+                    <tr>
+                        <td>Clinical loss reduction%</td>
+                        <td id="lossReductionA">-</td>
+                        <td id="lossReductionB">-</td>
+                        <td id="impactLossReduction">-</td>
+                    </tr>
+                    <tr>
+                        <td>Clinical loss reduction</td>
+                        <td id="lossSavedA">-</td>
+                        <td id="lossSavedB">-</td>
+                        <td id="lossSaved">-</td>
+                    </tr>
+                   
+
+                </table>
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Improvement               -->
+            <!-- ========================= -->
+
+            <!-- <div class="impact-card improvement">
+
+                <h3>Improvement</h3>
+
+                <div class="impact-item">
+                    <span>Additional referrals</span>
+                    <b id="impactExtraPatients">-</b>
+                </div>
+
+                <div class="impact-item">
+                    <span>Fewer missed patients</span>
+                    <b id="impactFewerMissed">-</b>
+                </div>
+
+                <div class="impact-item">
+                    <span>Clinical loss reduction</span>
+                    <b id="impactLossReduction">-</b>
+                </div>
+
+            </div> -->
+            <!-- ========================= -->
+            <!-- Overall Clinical Outcome  -->
+            <!-- ========================= -->
+
+            <div class="impact-card impact-summary">
+
+                <h3>Overall Clinical Outcome</h3>
+
+                <div class="impact-item">
+                    <span>Expected Clinical Loss</span>
+                    <b id="impactLoss">-</b>
+                </div>
+
+                <div class="impact-item">
+                    <span>PPV Gap</span>
+                    <b id="impactPPV">-</b>
+                </div>
+
+                <div class="impact-item">
+                    <span>Total Patients Referred</span>
+                    <b id="impactWaiting">-</b>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+    <div id="comparisonTab" class="graph-content">
+
+        ...results table...
+
+    </div>
+
+    <div id="rocTab" class="graph-content">
+
+        <canvas id="rocChart"></canvas>
+
+    </div>
+
+    <div id="lossTab" class="graph-content">
+
+        <canvas id="lossChart"></canvas>
+
+    </div>
+
+    <div id="ppvTab" class="graph-content">
+
+        <canvas id="ppvChart"></canvas>
+
+    </div>
+    <div id="jsonTab" class="graph-content">
 
         <section class="card">
 
-            <h2>Parameters</h2>
+            <h2>Export JSON</h2>
 
-            <div class="control">
+            <textarea
+                id="jsonOutput"
+                rows="14"
+                readonly></textarea>
 
-                <label for="pa">
-                    Group A Base Rate (P<sub>A</sub>)
-                </label>
-
-                <input
-                    id="pa"
-                    type="range"
-                    min="0.05"
-                    max="0.95"
-                    step="0.01"
-                    value="0.30">
-
-                <span id="paValue">0.30</span>
-
-            </div>
-
-            <div class="control">
-
-                <label for="pb">
-                    Group B Base Rate (P<sub>B</sub>)
-                </label>
-
-                <input
-                    id="pb"
-                    type="range"
-                    min="0.05"
-                    max="0.95"
-                    step="0.01"
-                    value="0.50">
-
-                <span id="pbValue">0.50</span>
-
-            </div>
-
-            <div class="control">
-
-                <label for="cfn">
-                    False Negative Cost
-                </label>
-
-                <input
-                    id="cfn"
-                    type="range"
-                    min="1"
-                    max="20"
-                    step="0.5"
-                    value="5">
-
-                <span id="cfnValue">5</span>
-
-            </div>
-
-            <div class="control">
-
-                <label for="cfp">
-                    False Positive Cost
-                </label>
-
-                <input
-                    id="cfp"
-                    type="range"
-                    min="0.5"
-                    max="5"
-                    step="0.5"
-                    value="1">
-
-                <span id="cfpValue">1</span>
-
-            </div>
-
-            <div class="control">
-
-                <label for="multiplier">
-                    Group A Cost Multiplier
-                </label>
-
-                <input
-                    id="multiplier"
-                    type="range"
-                    min="1"
-                    max="3"
-                    step="0.1"
-                    value="1.5">
-
-                <span id="multiplierValue">1.5</span>
-
-            </div>
-
-        </section>
-
-        <!-- ========================= -->
-        <!-- CSV -->
-        <!-- ========================= -->
-
-        <section class="card">
-
-            <h2>Upload CSV</h2>
-
-            <p>
-
-                Upload a CSV containing:
-
-                <strong>
-
-                    prob,
-                    true_label,
-                    group
-
-                </strong>
-
-            </p>
-
-            <input
-                type="file"
-                id="csvFile"
-                accept=".csv">
-
-        </section>
-
-        <!-- ========================= -->
-        <!-- BUTTON -->
-        <!-- ========================= -->
-
-        <section class="card">
-
-            <button id="computeButton">
-
-                Compute Optimal Thresholds
-
+            <button id="downloadJson">
+                Download JSON
             </button>
 
-        </section>
-
-        <!-- ========================= -->
-        <!-- RESULTS -->
-        <!-- ========================= -->
-
-        <section class="card">
-
-            <h2>Results</h2>
-
-            <div id="results">
-
-                Results will appear here.
-
-            </div>
+            
 
         </section>
+
+    </div>
+
+</div>
+
+
+
+<!-- <div id="results">
+
+Results will appear here.
+
+</div> -->
+
+</div>
+
+</div>
+
+</div>
+
+
+        
+
+
 
         <!-- ========================= -->
         <!-- CHARTS -->
         <!-- ========================= -->
 
-        <section class="card">
+        <!-- <section class="card">
 
             <h2>ROC Curve</h2>
 
@@ -239,13 +722,13 @@
 
             <canvas id="ppvChart"></canvas>
 
-        </section>
+        </section> -->
 
         <!-- ========================= -->
         <!-- EXPORT -->
         <!-- ========================= -->
 
-        <section class="card">
+        <!-- <section class="card">
 
             <h2>Export JSON</h2>
 
@@ -258,7 +741,7 @@
                 Download JSON
             </button>
 
-        </section>
+        </section> -->
         </section>
         <section id="theorem" class="tab-content">
 
@@ -462,6 +945,32 @@
             </div>
 
         </section>
+        <section id="clinicalContext" class="tab-content">
+
+            <div class="card">
+
+                <h2>Clinical Context</h2>
+
+                <div id="clinicalContextContent">
+                    clinical Context Content
+                </div>
+            </div>
+
+        </section>
+        <section id="research" class="tab-content">
+
+            <div class="card">
+
+                <h2>Research Results</h2>
+
+                <div id="researchContent">
+                    Select a project.
+                </div>
+            </div>
+
+        </section>
+        
+        
         <section id="guide" class="tab-content">
 
             <div class="card">
@@ -470,76 +979,49 @@
             How to Use
             </h2>
 
-            <ol>
+            <h3>Step 1 — CSV Format</h3>
 
-            <li>
+            
+
+            
 
             Upload a CSV file containing
 
-            <pre>
+            <div class="csv-example">
 
-            prob,true_label,group
+<h3>Expected CSV Format</h3>
 
-            </pre>
+<table>
 
-            </li>
+<tr>
+<th>prob</th>
+<th>true_label</th>
+<th>group</th>
+</tr>
 
-            <li>
+<tr>
+<td>0.82</td>
+<td>1</td>
+<td>A</td>
+</tr>
 
-            Adjust
+<tr>
+<td>0.15</td>
+<td>0</td>
+<td>B</td>
+</tr>
 
-            <ul>
+<tr>
+<td>0.64</td>
+<td>1</td>
+<td>B</td>
+</tr>
 
-            <li>Group A Base Rate</li>
+</table>
 
-            <li>Group B Base Rate</li>
+</div>
 
-            <li>False Negative Cost</li>
-
-            <li>False Positive Cost</li>
-
-            <li>Cost Multiplier</li>
-
-            </ul>
-
-            </li>
-
-            <li>
-
-            Click
-
-            <b>
-
-            Compute Optimal Thresholds
-
-            </b>
-
-            </li>
-
-            <li>
-
-            Review
-
-            <ul>
-
-            <li>Optimal thresholds</li>
-
-            <li>Expected loss</li>
-
-            <li>ROC curves</li>
-
-            <li>PPV curves</li>
-
-            <li>JSON export</li>
-
-            </ul>
-
-            </li>
-
-            </ol>
-
-            <hr>
-
+<div class="csv-example">
             <h3>
             CSV Format
             </h3>
@@ -574,63 +1056,271 @@
 
             <td>group</td>
 
-            <td>A or B</td>
+            <td>Protected group (A/B)</td>
 
             </tr>
 
             </table>
+            </div>
+
+            
+
+           
+
+            <h3>Step 2 — Configure the Optimiser</h3>
+
+            
+            <div class="guide-grid">
+
+                <div class="guide-card">
+                <h4>Group A Base Rate</h4>
+                <p>
+                Estimated prevalence for Group A.
+                </p>
+                </div>
+
+                <div class="guide-card">
+                <h4>Group B Base Rate</h4>
+                <p>
+                Estimated prevalence for Group B.
+                </p>
+                </div>
+
+                <div class="guide-card">
+                <h4>False Negative Cost</h4>
+                <p>
+                Penalty assigned to missed positive cases.
+                </p>
+                </div>
+
+                <div class="guide-card">
+                <h4>False Positive Cost</h4>
+                <p>
+                Penalty assigned to unnecessary intervention.
+                </p>
+                </div>
+
+                <div class="guide-card">
+                <h4>Cost Multiplier</h4>
+                <p>
+                Additional weighting applied to Group A.
+                </p>
+                </div>
+
+                </div>
+
+            
+
+            
+
+            <h3>Step 3 — Run Optimisation</h3>
+
+           <div class="info-box">
+
+<h3>▶️ Run the Optimiser</h3>
+
+<p>
+
+Press
+
+<b>Compute Optimal Thresholds</b>
+
+to calculate the Bayesian optimal decision threshold for each protected group.
+
+</p>
+
+</div>
+
+            
+
+            <h3>Step 4— Understanding Outputs</h3>
+
+
+                <div class="guide-grid">
+                    
+                <div class="guide-card">
+                    <h3>Optimal Thresholds</h3>
+                    <p>
+                    Decision thresholds that minimise expected cost.
+                    </p>
+                    </div>
+
+                    <div class="guide-card">
+                    <h3>Expected Loss</h3>
+                    <p>
+                    Average decision cost across thresholds.
+                    </p>
+                    </div>
+
+                    <div class="guide-card">
+                    <h3>ROC Curves</h3>
+                    <p>
+                    True Positive Rate vs False Positive Rate.
+                    </p>
+                    </div>
+
+                    <div class="guide-card">
+                    <h3>PPV Curves</h3>
+                    <p>
+                    Illustrates predictive parity under differing base rates.
+                    </p>
+                    </div>
+
+                    <div class="guide-card">
+                    <h3>JSON Export</h3>
+                    <p>
+                    Download complete optimisation results.
+                    </p>
+                    </div>
+
+                    <div class="guide-card">
+                    <h3>Research Comparison</h3>
+                    <p>
+                    Compare interactive results with published Python figures.
+                    </p>
+                    </div>
+
+                </div>
+                
+
+
+            
+
+            
 
             <hr>
 
-            <h3>
-            Interpreting the Results
-            </h3>
 
-            <ul>
+            <hr>
 
-            <li>
+            <div class="info-box">
 
-            Higher thresholds reduce false positives but increase false negatives.
+                <h3>Interpreting the Results / Clinical Interpretation</h3>
 
-            </li>
+                <p>
 
-            <li>
+                Higher thresholds reduce false positives but increase false negatives.
 
-            Changing the cost multiplier shifts the optimal threshold for Group A.
+                </p>
 
-            </li>
+                <p>
 
-            <li>
+                Expected Loss identifies the operating point that minimises total decision cost.
 
-            The Expected Loss curve identifies the threshold that minimises total decision cost.
+                </p>
 
-            </li>
+                <p>
 
-            <li>
+                ROC curves evaluate discrimination independently of prevalence.
 
-            The ROC curve illustrates discrimination performance independently of prevalence.
+                </p>
 
-            </li>
+                <p>
 
-            <li>
+                PPV differences illustrate Chouldechova's impossibility theorem when base rates differ.
 
-            The PPV plot demonstrates the dependence of predictive parity on group base rates.
+                </p>
 
-            </li>
+                <p>
 
-            </ul>
+                Changing the cost multiplier shifts the optimal threshold for the protected group.
+
+                </p>
+
+                </div>
 
             </div>
 
+            Recommended Reading
+• Theorem
+• Research
+• Interactive Optimiser
+
+
+
+
         </section>
+
+        <footer class="footer">
+
+    <div class="footer-content">
+
+        <h3>
+            NHS Fairness Optimiser
+        </h3>
+
+        <p>
+            Interactive research companion demonstrating Bayesian
+            decision-theoretic threshold optimisation for clinical AI
+            fairness.
+        </p>
+
+        
+
+        <p>
+            Based on the Bayesian fairness optimisation framework and
+            Chouldechova's impossibility theorem for differing base rates.
+        </p>
+
+        <hr>
+
+        <div class="footer-links">
+
+            <a href="paper/NHS_Fairness_Optimiser.pdf" target="_blank">
+                📄 Research Paper
+            </a>
+
+            <a href="https://github.com/yourusername/fairness-optimiser-web"
+            target="_blank">
+                💻 GitHub Repository
+            </a>
+
+            <a href="https://github.com/yourusername/fairness-optimiser-web"
+            target="_blank">
+                💻 GitHub Research Repository
+            </a>
+
+        </div>
+        <hr>
+
+        <p class="footer-small">
+
+            © 2026 Nitya 
+
+            <br>
+
+            Developed as part of ongoing research into
+            fair machine learning for NHS mental health triage.
+
+        </p>
+
+        <p class="footer-disclaimer">
+
+            <strong>Disclaimer</strong><br>
+
+            This software is provided for research,
+            educational and demonstration purposes only.
+            It is <strong>not a medical device</strong>,
+            does not provide clinical advice,
+            and must not be used to make patient care decisions.
+            All optimisation results should be interpreted alongside
+            appropriate clinical judgement.
+
+        </p>
+
+    </div>
+
+</footer>
     </main>
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/jstat@1.9.6/dist/jstat.min.js"></script>
 
+
 <script src="assets/js/maths.js"></script>
 <script src="assets/js/csv.js"></script>
 <script src="assets/js/charts.js"></script>
+<script src="assets/js/research.js"></script>
 <script src="assets/js/app.js"></script>
 
 </body>
